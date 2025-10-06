@@ -55,8 +55,8 @@ The mod then uses SMAPI's events to manually:
 1.  **Draw** the managed menu on top of the HUD.
 2.  **Forward all input** (keyboard, controller, mouse clicks, hover, and scrolling) to the menu to ensure it is interactive.
 
+This approach now avoids all conflicts with the game's time-keeping logic, resulting in a highly stable and compatible mod B).
+
 ## Future Plans
 
 Currently working on compatibility with Convienient Inventory, Chests Anywhere, etc. to allow any menu to be accessed while fishing.
-
-This approach now avoids all conflicts with the game's time-keeping logic, resulting in a highly stable and compatible mod B).
