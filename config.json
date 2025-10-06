@@ -1,0 +1,6 @@
+{
+  "UnfreezeTimeAlways": false,
+  "UnfreezeTimeWhileFishing": true,
+  "CloseOnFishBite": true,
+  "DebugLogging": false
+}

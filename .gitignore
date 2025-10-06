@@ -1,0 +1,18 @@
+# Build artifacts
+bin/
+obj/
+
+# User-specific build target paths
+StardewModdingAPI.targets
+
+# Don’t commit external DLLs
+*.dll
+*.deps.json
+*.zip
+
+# the regs
+.vs/
+*.user
+*.suo
+*.cache
+*.DS_Store

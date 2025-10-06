@@ -1,0 +1,10 @@
+{
+  "Name": "Inventory While Fishing",
+  "Author": "Jevon Lipsey",
+  "Version": "1.0.0",
+  "Description": "Lets you check your inventory during the fishing minigame.",
+  "UniqueID": "Jevon.InventoryWhileFishing",
+  "EntryDll": "InventoryWhileFishing.dll",
+  "MinimumApiVersion": "4.0.0",
+  "UpdateKeys": []
+}

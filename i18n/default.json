@@ -1,0 +1,6 @@
+{
+  "config.unfreeze-always.name": "Always Unfreeze Time",
+  "config.unfreeze-always.tooltip": "If true, time will never be paused when the inventory is open, no matter what.",
+  "config.unfreeze-while-fishing.name": "Unfreeze While Fishing",
+  "config.unfreeze-while-fishing.tooltip": "If true, time will only be unpaused when the inventory is open while you are actively fishing."
+}
