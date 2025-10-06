@@ -47,12 +47,12 @@ A `config.json` file is generated on first launch. You can edit it directly or t
 
 This mod solves a hard-coded limitation in Stardew Valley's engine where opening any menu freezes in-game time. It allows time to progress naturally while the inventory is open during fishing, without interrupting the game loop.
 
-Instead of using Harmony to perform runtime patches (my original approach), this mod now uses a more advanced and stable **"managed menu"** technique.
+I originally tried sing Harmony to perform runtime patches, which created a ton of gamebreaking glitches (particularly every 10 minute tick). This mod now uses a more advanced and stable **"managed menu"** technique.
 
 When the player opens their inventory while fishing, the menu is created and managed privately by the mod, while the game's main `Game1.activeClickableMenu` variable is left empty. Because the game engine believes no menu is open, it never pauses, allowing time to pass at whatever speed is dictated by the base game or other mods like ItsStardewTime.
 
 The mod then uses SMAPI's events to manually:
 1.  **Draw** the managed menu on top of the HUD.
-2.  **Forward all input** (keyboard, controller, mouse clicks, hover, and scrolling) to the menu to ensure it is fully interactive.
+2.  **Forward all input** (keyboard, controller, mouse clicks, hover, and scrolling) to the menu to ensure it is interactive.
 
-This approach avoids all conflicts with the game's time-keeping logic, resulting in a perfectly stable and seamless experience that is highly compatible with other mods.
+This approach now avoids all conflicts with the game's time-keeping logic, resulting in a highly stable and compatible mod B).
