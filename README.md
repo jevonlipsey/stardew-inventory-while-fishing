@@ -34,11 +34,14 @@ A `config.json` file is generated on first launch. You can edit it directly or t
 | `DebugLogging` | `false` | Prints detailed debug messages to the SMAPI console. |
 
 ---
+
 ## Compatibility
 
 * Built for **Stardew Valley 1.6+**, requires **SMAPI 4.0+** and GMCM.
 * Uses Harmony transpilers. Other mods that patch `Game1.UpdateGameClock` or `Game1.shouldTimePass` may conflict.
 * I use this mod while running 140+ mods, including an autofisher, time controllers, content patched mods, etc. Everything should be okay, but report issues if you encounter problems.
+
+---
 
 ## Overview + Technical Summary
 

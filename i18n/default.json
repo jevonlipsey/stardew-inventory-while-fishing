@@ -1,6 +1,10 @@
 {
-  "config.unfreeze-always.name": "Always Unfreeze Time",
-  "config.unfreeze-always.tooltip": "If true, time will never be paused when the inventory is open, no matter what.",
-  "config.unfreeze-while-fishing.name": "Unfreeze While Fishing",
-  "config.unfreeze-while-fishing.tooltip": "If true, time will only be unpaused when the inventory is open while you are actively fishing."
+  "config.unfreeze-time-always.name": "Always Unfreeze Time",
+  "config.unfreeze-time-always.tooltip": "If true, menus never pause time.",
+  "config.unfreeze-time-while-fishing.name": "Unfreeze While Fishing",
+  "config.unfreeze-time-while-fishing.tooltip": "If true, time stays unpaused only while fishing.",
+  "config.close-on-fish-bite.name": "Close Inventory on Fish Bite",
+  "config.close-on-fish-bite.tooltip": "Automatically closes menus when a fish bites.",
+  "config.debug-logging.name": "Enable Debug Logging",
+  "config.debug-logging.tooltip": "Logs detailed state updates for testing."
 }
