@@ -1,19 +1,19 @@
 ﻿#nullable enable
+
 using System;
-using System.Collections.Generic;
-using GenericModConfigMenu;
-using HarmonyLib;
+using System.Linq;
+using Microsoft.Xna.Framework.Input;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley;
 using StardewValley.Menus;
 using StardewValley.Tools;
+using GenericModConfigMenu;
 
 namespace InventoryWhileFishing
 {
     internal class ModConfig
     {
-        public bool UnfreezeTimeAlways { get; set; } = false;
         public bool UnfreezeTimeWhileFishing { get; set; } = true;
         public bool CloseOnFishBite { get; set; } = true;
         public bool DebugLogging { get; set; } = false;
@@ -21,219 +21,121 @@ namespace InventoryWhileFishing
 
     public class ModEntry : Mod
     {
-        // expose config and monitor for harmony patch
-        internal static ModConfig Config = null!;
-        internal static IMonitor StaticMonitor = null!;
-
-        // determines if time should pass in menus
-        internal static bool ShouldUnfreezeTime = false;
-
-        private bool itsStardewTimeLoaded = false;
+        private ModConfig Config = null!;
+        private GameMenu? managedMenu;
 
         public override void Entry(IModHelper helper)
         {
-            Config = helper.ReadConfig<ModConfig>();
-            StaticMonitor = this.Monitor;
+            this.Config = helper.ReadConfig<ModConfig>();
 
-            // apply all harmony patches in this assembly
-            new Harmony(this.ModManifest.UniqueID).PatchAll();
-
-            // subscribe to game events
             helper.Events.GameLoop.GameLaunched += this.OnGameLaunched;
             helper.Events.Input.ButtonsChanged += this.OnButtonsChanged;
             helper.Events.GameLoop.UpdateTicked += this.OnUpdateTicked;
-            helper.Events.Display.MenuChanged += this.OnMenuChanged;
-
-            // check for compatibility with ist
-            itsStardewTimeLoaded = helper.ModRegistry.IsLoaded("ItsStardewTime");
-            Monitor.Log("Inventory While Fishing loaded.", LogLevel.Info);
+            helper.Events.Display.RenderedHud += this.OnRenderedHud;
+            helper.Events.Input.ButtonPressed += this.OnButtonPressed;
+            helper.Events.Input.CursorMoved += this.OnCursorMoved;
+            helper.Events.Input.MouseWheelScrolled += this.OnMouseWheelScrolled;
         }
 
         private void OnGameLaunched(object? sender, GameLaunchedEventArgs e)
         {
-            // set up gmcm
             var api = this.Helper.ModRegistry.GetApi<IGenericModConfigMenuApi>("spacechase0.GenericModConfigMenu");
             if (api is null) return;
 
-            api.Register(this.ModManifest, () => Config = new ModConfig(), () => this.Helper.WriteConfig(Config));
-
-            api.AddBoolOption(this.ModManifest,
-                name: () => "Always Unfreeze Time",
-                tooltip: () => "If true, menus never pause time.",
-                getValue: () => Config.UnfreezeTimeAlways,
-                setValue: value => Config.UnfreezeTimeAlways = value);
-
-            api.AddBoolOption(this.ModManifest,
-                name: () => "Unfreeze While Fishing",
-                tooltip: () => "If true, time stays unpaused only while fishing.",
-                getValue: () => Config.UnfreezeTimeWhileFishing,
-                setValue: value => Config.UnfreezeTimeWhileFishing = value);
-
-            api.AddBoolOption(this.ModManifest,
-                name: () => "Close Inventory on Fish Bite",
-                tooltip: () => "Automatically closes menus when a fish bites.",
-                getValue: () => Config.CloseOnFishBite,
-                setValue: value => Config.CloseOnFishBite = value);
-
-            api.AddBoolOption(this.ModManifest,
-                name: () => "Enable Debug Logging",
-                tooltip: () => "Logs detailed state updates for testing.",
-                getValue: () => Config.DebugLogging,
-                setValue: value => Config.DebugLogging = value);
-        }
-
-        // a helper to check if a button is in a sequence
-        private static bool SequenceContains(IEnumerable<SButton>? seq, SButton button)
-        {
-            if (seq == null) return false;
-            foreach (var b in seq)
-                if (b == button)
-                    return true;
-            return false;
+            api.Register(this.ModManifest, () => this.Config = new ModConfig(), () => this.Helper.WriteConfig(this.Config));
+            api.AddBoolOption(this.ModManifest, name: () => "Unfreeze While Fishing", tooltip: () => "If true, time stays unpaused only while fishing.", getValue: () => this.Config.UnfreezeTimeWhileFishing, setValue: value => this.Config.UnfreezeTimeWhileFishing = value);
+            api.AddBoolOption(this.ModManifest, name: () => "Close Inventory on Fish Bite", tooltip: () => "Automatically closes menus when a fish bites.", getValue: () => this.Config.CloseOnFishBite, setValue: value => this.Config.CloseOnFishBite = value);
+            api.AddBoolOption(this.ModManifest, name: () => "Enable Debug Logging", tooltip: () => "Logs detailed state updates for testing.", getValue: () => this.Config.DebugLogging, setValue: value => this.Config.DebugLogging = value);
         }
 
         private void OnButtonsChanged(object? sender, ButtonsChangedEventArgs e)
         {
-            if (!Context.IsWorldReady)
-                return;
+            if (!Context.IsWorldReady || !this.Config.UnfreezeTimeWhileFishing) return;
 
-            // check if any inventory button was pressed
-            bool openInv =
-                SequenceContains(e.Pressed, SButton.E) ||
-                SequenceContains(e.Pressed, SButton.Escape) ||
-                SequenceContains(e.Pressed, SButton.ControllerStart) ||
-                SequenceContains(e.Pressed, SButton.ControllerY) ||
-                SequenceContains(e.Pressed, SButton.ControllerB);
+            bool isMenuButtonPressed = Game1.options.menuButton.Any(b => e.Pressed.Contains(b.ToSButton()));
 
-            if (!openInv)
-                return;
-
-            // if we are fishing and no menu is open, open the game menu
-            if (Game1.activeClickableMenu == null && Game1.player.CurrentTool is FishingRod { isFishing: true })
+            if (isMenuButtonPressed)
             {
-                Game1.activeClickableMenu = new GameMenu();
-                // suppress the input so the menu doesn't immediately close
-                foreach (var b in new[] { SButton.E, SButton.Escape, SButton.ControllerStart, SButton.ControllerY, SButton.ControllerB })
-                    this.Helper.Input.Suppress(b);
+                if (this.managedMenu != null)
+                {
+                    this.CloseManagedMenu();
+                }
+                else if (Game1.activeClickableMenu == null && Game1.player.CurrentTool is FishingRod rod && rod.isFishing)
+                {
+                    if (rod.isNibbling || rod.hit) return;
 
-                if (Config.DebugLogging)
-                    Monitor.Log("Opened inventory while fishing.", LogLevel.Debug);
+                    this.managedMenu = new GameMenu();
+                    if (this.Config.DebugLogging) this.Monitor.Log("Opened managed menu.", LogLevel.Debug);
+                }
+
+        
+                foreach (var button in e.Pressed)
+                {
+                    this.Helper.Input.Suppress(button);
+                }
             }
         }
+
 
         private void OnUpdateTicked(object? sender, UpdateTickedEventArgs e)
         {
-            if (!Context.IsWorldReady || Game1.player == null)
+            if (this.managedMenu == null) return;
+            this.managedMenu.update(Game1.currentGameTime);
+
+            if (this.Config.CloseOnFishBite && Game1.player.CurrentTool is FishingRod rod && (rod.isNibbling || rod.hit))
             {
-                ShouldUnfreezeTime = false;
-                return;
-            }
-
-            // auto-close the menu on a fish bite
-            if (Config.CloseOnFishBite && Game1.player.CurrentTool is FishingRod rod && rod.isNibbling && Game1.activeClickableMenu != null)
-            {
-                Game1.exitActiveMenu();
-                if (Config.DebugLogging)
-                    Monitor.Log("Fish bite detected — closed menu.", LogLevel.Debug);
-            }
-
-            // determine if time should be unfrozen based on config and if we're fishing
-            if (Game1.activeClickableMenu is GameMenu)
-            {
-                bool fishing = Game1.player.CurrentTool is FishingRod { isFishing: true };
-                ShouldUnfreezeTime = Config.UnfreezeTimeAlways || (Config.UnfreezeTimeWhileFishing && fishing);
-            }
-            else
-            {
-                ShouldUnfreezeTime = false;
-            }
-
-            // if ist is loaded, let it handle things
-            if (itsStardewTimeLoaded)
-                return;
-
-            // manually advances the game clock if time is unfrozen
-            if (ShouldUnfreezeTime)
-            {
-                Game1.player.CanMove = true;
-                Game1.player.forceTimePass = true;
-
-                if (e.IsMultipleOf(60)) // runs once every 60 ticks (1 second)
-                {
-                    // calculate the next 10-minute interval
-                    int time = Game1.timeOfDay;
-                    int hour = time / 100;
-                    int minute = time % 100 + 10;
-
-                    if (minute >= 60)
-                    {
-                        hour++;
-                        minute -= 60;
-                    }
-
-                    if (hour >= 24)
-                    {
-                        hour = 6;
-                        minute = 0;
-                    }
-
-                    Game1.timeOfDay = hour * 100 + minute;
-
-                    // trigger the game's 10-minute update logic
-                    try { Game1.performTenMinuteClockUpdate(); }
-                    catch (Exception ex)
-                    {
-                        StaticMonitor.Log($"Error advancing time: {ex}", LogLevel.Warn);
-                    }
-                }
-            }
-            else if (Game1.player != null)
-            {
-                // ensure time is frozen again if it shouldn't pass
-                Game1.player.forceTimePass = false;
+                this.CloseManagedMenu();
+                if (this.Config.DebugLogging) this.Monitor.Log("Fish bite detected — closing managed menu.", LogLevel.Debug);
             }
         }
 
-        private void OnMenuChanged(object? sender, MenuChangedEventArgs e)
+        private void OnRenderedHud(object? sender, RenderedHudEventArgs e)
         {
-            // when the game menu closes, reset state
-            if (e.OldMenu is GameMenu)
-            {
-                ShouldUnfreezeTime = false;
-                if (Game1.player != null)
-                    Game1.player.forceTimePass = false;
+            this.managedMenu?.draw(e.SpriteBatch);
+        }
 
-                if (Config.DebugLogging)
-                    Monitor.Log("Menu closed, time restored to normal.", LogLevel.Trace);
+        private void OnButtonPressed(object? sender, ButtonPressedEventArgs e)
+        {
+            if (this.managedMenu != null)
+            {
+                var point = e.Cursor.ScreenPixels.ToPoint();
+                if (e.Button.IsActionButton() || e.Button.IsUseToolButton())
+                {
+                    this.managedMenu.receiveLeftClick(point.X, point.Y, playSound: true);
+                }
+                if (Enum.TryParse<Keys>(e.Button.ToString(), true, out Keys xnaKey))
+                {
+                    this.managedMenu.receiveKeyPress(xnaKey);
+                }
+                this.Helper.Input.Suppress(e.Button);
             }
         }
-    }
 
-    // the harmony patch that targets the game's time-passing logic
-    [HarmonyPatch(typeof(Game1), nameof(Game1.shouldTimePass))]
-    public static class TimePatch
-    {
-        // this prefix runs before the original game method
-        [HarmonyPrefix]
-        public static bool Prefix(ref bool __result)
+        private void OnCursorMoved(object? sender, CursorMovedEventArgs e)
         {
-            try
+            if (this.managedMenu != null)
             {
-                if (ModEntry.ShouldUnfreezeTime)
-                {
-                    // set the result to 'true' (time should pass)
-                    __result = true;
-                    // return false to skip the original method entirely
-                    return false;
-                }
+                var point = e.NewPosition.ScreenPixels.ToPoint();
+                this.managedMenu.performHoverAction(point.X, point.Y);
             }
-            catch (Exception ex)
-            {
-                ModEntry.StaticMonitor.Log($"Error in time patch: {ex}", LogLevel.Error);
-            }
+        }
 
-            // if our condition isn't met, run the original game code
-            return true;
+        private void OnMouseWheelScrolled(object? sender, MouseWheelScrolledEventArgs e)
+        {
+            this.managedMenu?.receiveScrollWheelAction(e.Delta);
+        }
+
+        private void CloseManagedMenu()
+        {
+            if (this.managedMenu != null)
+            {
+                this.Helper.Reflection
+                    .GetMethod(this.managedMenu, "cleanupBeforeExit")
+                    .Invoke();
+
+                this.managedMenu = null;
+                if (this.Config.DebugLogging) this.Monitor.Log("Closed managed menu.", LogLevel.Debug);
+            }
         }
     }
 }

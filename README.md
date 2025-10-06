@@ -11,7 +11,7 @@ A **Stardew Valley** mod that lets you open and manage your inventory, map, and 
 * **Menus close automatically** when a fish bites. Good for autofishing mods.
 * **Customizable** through **Generic Mod Config Menu**. Choose whether time always passes in menus or only while fishing. Also, choose if the menu automatically closes on a fish bite or not.
 * Keyboard and Gamepad support.
-* Optional Integration with [ItsStardewTime.](https://github.com/Enerrex/ItsStardewTime)
+* Designed for compatibility with other time mods, including [ItsStardewTime.](https://github.com/Enerrex/ItsStardewTime).
 
 ---
 
@@ -45,6 +45,14 @@ A `config.json` file is generated on first launch. You can edit it directly or t
 
 ## Overview + Technical Summary
 
-Identified and solved a hard-coded limitation in Stardew Valley's game engine where opening any menu freezes in-game time. I developed this mod to allow time to progress naturally while the player's inventory is open while fishing. This is a huge benefit to me, as I like to organize while autofishing. I figured others would enjoy it too.
+This mod solves a hard-coded limitation in Stardew Valley's engine where opening any menu freezes in-game time. It allows time to progress naturally while the inventory is open during fishing, without interrupting the game loop.
 
-The technical solution involved using the Harmony library to perform runtime patching of the game's C# code. After looking through some [decompiled code](https://github.com/Dannode36/StardewValleyDecompiled), I wrote a prefix patch targeting the core time-keeping method, Game1.shouldTimePass(), to inject logic that overrides the engine's default behavior. This required a deep analysis of the game loop to ensure the patch was efficient, compatible with other mods, and did not disrupt critical 10-minute clock updates that manage world events. The mod also includes custom input handlers and state management to provide a seamless user experience, complete with a config menu via the Generic Mod Config Menu API.
+Instead of using Harmony to perform runtime patches (my original approach), this mod now uses a more advanced and stable **"managed menu"** technique.
+
+When the player opens their inventory while fishing, the menu is created and managed privately by the mod, while the game's main `Game1.activeClickableMenu` variable is left empty. Because the game engine believes no menu is open, it never pauses, allowing time to pass at whatever speed is dictated by the base game or other mods like ItsStardewTime.
+
+The mod then uses SMAPI's events to manually:
+1.  **Draw** the managed menu on top of the HUD.
+2.  **Forward all input** (keyboard, controller, mouse clicks, hover, and scrolling) to the menu to ensure it is fully interactive.
+
+This approach avoids all conflicts with the game's time-keeping logic, resulting in a perfectly stable and seamless experience that is highly compatible with other mods.
