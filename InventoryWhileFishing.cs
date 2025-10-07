@@ -67,32 +67,33 @@ namespace InventoryWhileFishing
         {
             if (!Context.IsWorldReady) return;
 
-            // determine if the mod's core feature should be active at all
-            bool isFishing = Game1.player?.CurrentTool is FishingRod { isFishing: true };
-            bool shouldBeActive = (this.Config.UnfreezeTimeWhileFishing && isFishing) || this.Config.UnfreezeTimeAlways;
-            if (!shouldBeActive) return;
-
-            // check if any menu button was pressed (works for keyboard and controller)
             bool isMenuButtonPressed = Game1.options.menuButton.Any(b => e.Pressed.Contains(b.ToSButton()));
 
-            if (isMenuButtonPressed)
+            // always handle closing the menu first, with no other conditions.
+            if (isMenuButtonPressed && this.managedMenu != null)
             {
-                // if our menu is open, close it (toggle behavior)
-                if (this.managedMenu != null)
+                this.CloseManagedMenu();
+                // FIX for CS1061: Loop through pressed buttons and suppress them individually.
+                foreach (var button in e.Pressed)
                 {
-                    this.CloseManagedMenu();
+                    this.Helper.Input.Suppress(button);
                 }
-                // otherwise, if no other menu is open, open our menu
-                else if (Game1.activeClickableMenu == null)
-                {
-                    // safety check to prevent opening the menu right when a fish bites - caused soft lock
-                    if (isFishing && Game1.player?.CurrentTool is FishingRod rod && (rod.isNibbling || rod.hit)) return;
+                return;
+            }
+            
+            // after checking for close, now check if we should open a menu.
+            bool isFishing = Game1.player?.CurrentTool is FishingRod { isFishing: true };
+            bool shouldBeActive = (this.Config.UnfreezeTimeWhileFishing && isFishing) || this.Config.UnfreezeTimeAlways;
 
-                    this.managedMenu = new GameMenu();
-                    if (this.Config.DebugLogging) this.Monitor.Log("Opened managed menu.", LogLevel.Debug);
-                }
-        
-                // stop the game from processing the button press again
+            if (isMenuButtonPressed && this.managedMenu == null && Game1.activeClickableMenu == null && shouldBeActive)
+            {
+                // safety check to prevent opening the menu right when a fish bites
+                if (isFishing && Game1.player?.CurrentTool is FishingRod rod && (rod.isNibbling || rod.hit)) return;
+
+                this.managedMenu = new GameMenu();
+                if (this.Config.DebugLogging) this.Monitor.Log("Opened managed menu.", LogLevel.Debug);
+                
+                // FIX for CS1061: Loop through pressed buttons and suppress them individually.
                 foreach (var button in e.Pressed)
                 {
                     this.Helper.Input.Suppress(button);
@@ -103,10 +104,11 @@ namespace InventoryWhileFishing
         // runs 60 times per second
         private void OnUpdateTicked(object? sender, UpdateTickedEventArgs e)
         {
-            if (this.managedMenu == null) return;
+            var menu = this.managedMenu;
+            if (menu == null) return;
             
             // tell our ghost menu to update itself
-            this.managedMenu.update(Game1.currentGameTime);
+            menu.update(Game1.currentGameTime);
 
             // if a fish bites, close the menu
             if (this.Config.CloseOnFishBite && Game1.player?.CurrentTool is FishingRod rod && rod.isFishing && (rod.isNibbling || rod.hit))
@@ -127,18 +129,19 @@ namespace InventoryWhileFishing
 
         private void OnButtonPressed(object? sender, ButtonPressedEventArgs e)
         {
-            if (this.managedMenu != null)
+            var menu = this.managedMenu;
+            if (menu != null)
             {
                 var point = e.Cursor.ScreenPixels.ToPoint();
                 // handle clicks
                 if (e.Button.IsActionButton() || e.Button.IsUseToolButton())
                 {
-                    this.managedMenu.receiveLeftClick(point.X, point.Y, playSound: true);
+                    menu.receiveLeftClick(point.X, point.Y, playSound: true);
                 }
                 // handle key presses
                 if (Enum.TryParse<Keys>(e.Button.ToString(), true, out Keys xnaKey))
                 {
-                    this.managedMenu.receiveKeyPress(xnaKey);
+                    menu.receiveKeyPress(xnaKey);
                 }
                 this.Helper.Input.Suppress(e.Button);
             }
@@ -146,31 +149,34 @@ namespace InventoryWhileFishing
 
         private void OnCursorMoved(object? sender, CursorMovedEventArgs e)
         {
-            if (this.managedMenu != null)
+            var menu = this.managedMenu;
+            if (menu != null)
             {
                 // handle mouse hover effects
                 var point = e.NewPosition.ScreenPixels.ToPoint();
-                this.managedMenu.performHoverAction(point.X, point.Y);
+                menu.performHoverAction(point.X, point.Y);
             }
         }
 
         private void OnMouseWheelScrolled(object? sender, MouseWheelScrolledEventArgs e)
         {
-            if (this.managedMenu != null)
+            var menu = this.managedMenu;
+            if (menu != null)
             {
                 // handle scrolling
-                this.managedMenu?.receiveScrollWheelAction(e.Delta);
+                menu.receiveScrollWheelAction(e.Delta);
             }
         }
 
         // safely closes and cleans up our managed menu
         private void CloseManagedMenu()
         {
-            if (this.managedMenu != null)
+            var menu = this.managedMenu;
+            if (menu != null)
             {
                 // use reflection to call the game's internal cleanup method
                 this.Helper.Reflection
-                    .GetMethod(this.managedMenu, "cleanupBeforeExit")
+                    .GetMethod(menu, "cleanupBeforeExit")
                     .Invoke();
 
                 this.managedMenu = null;
