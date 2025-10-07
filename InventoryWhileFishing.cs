@@ -28,6 +28,9 @@ namespace InventoryWhileFishing
         // "ghost menu" that we manage ourselves
         private GameMenu? managedMenu;
 
+        // NEW: Keep track of the fishing rod that started the action
+        private FishingRod? activeFishingRod;
+
         // main entry point
         public override void Entry(IModHelper helper)
         {
@@ -91,6 +94,13 @@ namespace InventoryWhileFishing
                 if (isFishing && Game1.player?.CurrentTool is FishingRod rod && (rod.isNibbling || rod.hit)) return;
 
                 this.managedMenu = new GameMenu();
+                
+                // track the fishing rod that started this, if any
+                if (isFishing)
+                {
+                    this.activeFishingRod = Game1.player?.CurrentTool as FishingRod;
+                }
+
                 if (this.Config.DebugLogging) this.Monitor.Log("Opened managed menu.", LogLevel.Debug);
                 
                 // FIX for CS1061: Loop through pressed buttons and suppress them individually.
@@ -106,6 +116,19 @@ namespace InventoryWhileFishing
         {
             var menu = this.managedMenu;
             if (menu == null) return;
+
+            // Logic to handle moving the fishing rod from the active slot
+            if (this.activeFishingRod != null && Game1.player?.CurrentTool != this.activeFishingRod)
+            {
+                if (this.Config.DebugLogging) this.Monitor.Log("Player is no longer holding the active fishing rod. Forcing fishing action to end.", LogLevel.Debug);
+                
+                // Force the fishing action to end cleanly
+                this.activeFishingRod.doneFishing(Game1.player);
+
+                // Close the menu now that the context has changed
+                this.CloseManagedMenu();
+                return; // Exit early
+            }
             
             // tell our ghost menu to update itself
             menu.update(Game1.currentGameTime);
@@ -121,7 +144,6 @@ namespace InventoryWhileFishing
         // draws to screen
         private void OnRenderedHud(object? sender, RenderedHudEventArgs e)
         {
-            // if our menu exists, draw it to the screen
             this.managedMenu?.draw(e.SpriteBatch);
         }
         
@@ -180,6 +202,10 @@ namespace InventoryWhileFishing
                     .Invoke();
 
                 this.managedMenu = null;
+                
+                // Clear the tracked fishing rod
+                this.activeFishingRod = null;
+
                 if (this.Config.DebugLogging) this.Monitor.Log("Closed managed menu.", LogLevel.Debug);
             }
         }
