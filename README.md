@@ -6,7 +6,7 @@ A **Stardew Valley** mod that lets you open and manage your inventory, map, and 
 
 ## Features
 
-* Open the **inventory, map, skills**, and other menus while fishing. Good for organizing, especially with [Chests Anywhere](https://www.nexusmods.com/stardewvalley/mods/518).
+* Open the **inventory, map, skills**, and other menus while fishing. Good for quick organization.
 * **Time continues** naturally instead of pausing.
 * **Menus close automatically** when a fish bites. Good for autofishing mods.
 * **Customizable** through **Generic Mod Config Menu**. Choose whether time always passes in menus or only while fishing. Also, choose if the menu automatically closes on a fish bite or not.
@@ -38,7 +38,7 @@ A `config.json` file is generated on first launch. You can edit it directly or t
 ## Compatibility
 
 * Built for **Stardew Valley 1.6+**, requires **SMAPI 4.0+** and GMCM.
-* Uses Harmony transpilers. Other mods that patch `Game1.UpdateGameClock` or `Game1.shouldTimePass` may conflict.
+* Unfortunately wont work with seperate managed menus, like the Junimo menu from Convienient Inventory or Chest menus with Chests Anywhere :/. Looking for a way to integrate this soon.
 * I use this mod while running 140+ mods, including an autofisher, time controllers, content patched mods, etc. Everything should be okay, but report issues if you encounter problems.
 
 ---
@@ -59,4 +59,4 @@ This approach now avoids all conflicts with the game's time-keeping logic, resul
 
 ## Future Plans
 
-Currently working on compatibility with Convienient Inventory, Chests Anywhere, etc. to allow any menu to be accessed while fishing.
+Currently working on compatibility with Convienient Inventory, Chests Anywhere, etc. to allow any menu to be accessed while fishing. Right now, only the default `GameMenu` is accessed.
