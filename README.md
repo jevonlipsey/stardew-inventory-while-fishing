@@ -2,6 +2,7 @@
 
 A **Stardew Valley** mod that lets you open and manage your inventory, map, and other menus **while fishing**, without freezing the game. Perfect for multitaskers or players using auto-fishing mods who want time to continue while waiting for a bite.
 
+![modgif](https://i.imgur.com/0B5ALW2.gif)
 ---
 
 ## Features
