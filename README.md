@@ -11,7 +11,7 @@ A **Stardew Valley** mod that lets you open and manage your inventory, map, and 
 * **Time continues** naturally instead of pausing.
 * **Menus close automatically** when a fish bites. Good for autofishing mods.
 * **Customizable** through **Generic Mod Config Menu**. Choose whether time always passes in menus or only while fishing. Also, choose if the menu automatically closes on a fish bite or not.
-* Keyboard and Gamepad support.
+* Keyboard support, Gamepad support coming soon.
 * Designed for compatibility with other time mods, including [ItsStardewTime.](https://github.com/Enerrex/ItsStardewTime).
 
 ---
@@ -60,4 +60,4 @@ This approach now avoids all conflicts with the game's time-keeping logic, resul
 
 ## Future Plans
 
-Currently working on compatibility with Convienient Inventory, Chests Anywhere, etc. to allow any menu to be accessed while fishing. Right now, only the default `GameMenu` is accessed.
+Currently working on compatibility with Convienient Inventory, Chests Anywhere, etc. to allow any menu to be accessed while fishing. Right now, only the default `GameMenu` is accessed. * Gamepad support currently broken. Looking into this first.
